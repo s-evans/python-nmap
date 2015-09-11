@@ -70,15 +70,6 @@ parser.add_argument(
     '-S', type=hostlist,
     help='comma separated source ip address(es) to use')
 
-# TODO: implement this
-parser.add_argument(
-    '--spoof-mac', type=EUI,
-    help='source mac address to use')
-
-parser.add_argument(
-    '--mtu', type=int, default=1480,
-    help='fragment packets using the given mtu')
-
 group = parser.add_mutually_exclusive_group(required=True)
 
 group.add_argument(
@@ -97,7 +88,6 @@ for target in args['targets']:
 random.shuffle(scan_instances)
 
 if args['sU']:
-    # TODO: randomize udp payload
     protocol = UDP()
 elif args['sS']:
     protocol = TCP(
@@ -107,6 +97,7 @@ else:
     raise ValueError('unknown scan type specified')
 
 ip = IP()
+
 for scan in scan_instances:
     print 'scanning {} on port {}'.format(scan[0], scan[1])
 
@@ -124,13 +115,17 @@ for scan in scan_instances:
     ip.dst = scan[0]
     ip.id = RandShort()
 
+    # TODO: test this out. think about how we're going to be able to test. think
+    # about how we're going to be able to get results if spoofing
     if args['S'] != None:
-        ip.src = args['S'][Rand() % len(args['S'])]
+        ip.src = args['S'][RandShort() % len(args['S'])]
 
-    res, unans = scapy.all.sr(
-        fragment(ip / protocol, args['mtu']),
+    res = sr1(
+        ip / protocol,
         inter=args['scan_delay'],
         timeout=args['host_timeout'])
 
     if res:
         res.show()
+
+    # todo: come up with a better way to display results
