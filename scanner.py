@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from scapy.all import *
-from netaddr import *
+import time
 import random
 import argparse
 import socket
@@ -48,6 +48,9 @@ parser = argparse.ArgumentParser(
     description='minimal python version of nmap using scapy')
 
 parser.add_argument(
+    '--spoof-mac', help='source mac address to use')
+
+parser.add_argument(
     'targets', type=hostlist, help='target host(s) to be scanned')
 
 parser.add_argument(
@@ -83,7 +86,7 @@ args = vars(parser.parse_args())
 scan_instances = []
 for target in args['targets']:
     for p in args['p']:
-        scan_instances.append((target, p))
+        scan_instances.append([target, p, False])
 
 random.shuffle(scan_instances)
 
@@ -115,17 +118,20 @@ for scan in scan_instances:
     ip.dst = scan[0]
     ip.id = RandShort()
 
-    # TODO: test this out. think about how we're going to be able to test. think
-    # about how we're going to be able to get results if spoofing
     if args['S'] != None:
         ip.src = args['S'][RandShort() % len(args['S'])]
 
-    res = sr1(
-        ip / protocol,
-        inter=args['scan_delay'],
+    res = srp1(
+        Ether(src=args['spoof_mac']) / ip / protocol,
+        verbose=False,
         timeout=args['host_timeout'])
 
     if res:
-        res.show()
+        scan[2] = True
 
-    # todo: come up with a better way to display results
+    time.sleep(args['scan_delay'])
+
+print '{0:<20}{1:<20}{2:<20}'.format('host', 'port', 'open')
+scan_instances.sort()
+for scan in scan_instances:
+    print '{0:<20}{1:<20}{2:<20}'.format(scan[0], scan[1], str(scan[2]))
